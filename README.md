@@ -93,10 +93,10 @@ real-time-fraud-detection-pipeline/
 
 ## Fraud Detection Rules
 
-- 🚨 Transactions above ₹50,000 flagged
-- ⚡ Multiple transactions within short time window
-- 🌍 Sudden change in transaction location
-- 🔁 Repeated transactions
+- 1. Transactions above ₹50,000 flagged
+- 2. Multiple transactions within short time window
+- 3. Sudden change in transaction location
+- 4. Repeated transactions
 
 ---
 
