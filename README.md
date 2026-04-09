@@ -23,7 +23,11 @@ A production-style streaming pipeline using **Apache Kafka**, **Apache Spark Str
 
 ```
 fraud-detection/
+<<<<<<< HEAD
 ├── docker-compose.yml          # Orchestrates all services
+=======
+├── docker-compose.yml          
+>>>>>>> 68f75264affd4489de478e1117f6e8cd80db304e
 ├── producer/
 │   ├── Dockerfile
 │   ├── requirements.txt
