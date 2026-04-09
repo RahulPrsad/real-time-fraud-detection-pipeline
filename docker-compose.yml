@@ -1,0 +1,110 @@
+version: "3.9"
+
+services:
+
+  # ─── Zookeeper ───────────────────────────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - fraud-net
+
+  # ─── Kafka Broker ────────────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+    networks:
+      - fraud-net
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # ─── Kafka UI (optional, useful for debugging) ───────────────
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    networks:
+      - fraud-net
+
+  # ─── Python Transaction Producer ─────────────────────────────
+  producer:
+    build:
+      context: ./producer
+      dockerfile: Dockerfile
+    container_name: producer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TOPIC: transactions
+      TRANSACTIONS_PER_SECOND: 5
+    networks:
+      - fraud-net
+
+  # ─── Spark Streaming + Fraud Detection ───────────────────────
+  spark:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    container_name: spark
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TOPIC: transactions
+      OUTPUT_PATH: /app/output
+      FRAUD_THRESHOLD: "10000"
+      RAPID_TXN_LIMIT: "5"
+      LOCATION_KM_LIMIT: "500"
+    volumes:
+      - ./output:/app/output
+    networks:
+      - fraud-net
+
+  # ─── Streamlit Dashboard ──────────────────────────────────────
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: dashboard
+    depends_on:
+      - spark
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./output:/app/output
+    networks:
+      - fraud-net
+
+networks:
+  fraud-net:
+    driver: bridge

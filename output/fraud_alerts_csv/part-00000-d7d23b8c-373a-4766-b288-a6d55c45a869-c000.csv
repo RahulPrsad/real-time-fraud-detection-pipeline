@@ -1,0 +1,2 @@
+transaction_id,user_id,amount,timestamp,city,latitude,longitude,transaction_type,merchant,is_seed_fraud,kafka_ts,event_time,fraud_high_value,fraud_location_anomaly,is_fraud,fraud_reason,processed_at
+e5ce9f14-080b-4bf6-8f68-e29de79ffea6,user_0018,1327.61,2026-04-09T20:12:55.074836+00:00,Chicago,41.92785068969634,-87.58563152376082,transfer,"Solis, Miller and Kelly",false,2026-04-09T20:12:55.075Z,2026-04-09T20:12:55.074Z,false,true,true,location_anomaly,2026-04-09T20:13:06.984Z
