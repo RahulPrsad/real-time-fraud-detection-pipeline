@@ -95,23 +95,24 @@ def make_rapid_transactions(user_id: str) -> list[dict]:
 
 
 def make_location_anomaly(user_id: str) -> list[dict]:
-    """Rule 3 seed: two transactions in vastly different cities back-to-back."""
-    city_a, city_b = random.sample(["New York", "Tokyo", "London", "Sydney"], 2)
-    lat_a, lon_a = CITIES[city_a]
-    lat_b, lon_b = CITIES[city_b]
-    now = datetime.now(timezone.utc).isoformat()
-    base = {
+    """Rule 3 seed: ONE transaction placed in a city far from the user's last known city.
+    Spark detects the anomaly via lag() comparison — we only need one message here,
+    not two, to avoid flooding the topic with location-anomaly events."""
+    # Pick a city that is geographically extreme (far from any US base city)
+    anomaly_city = random.choice(["Tokyo", "London", "Paris", "Sydney"])
+    lat, lon = CITIES[anomaly_city]
+    return [{
+        "transaction_id": str(uuid.uuid4()),
         "user_id": user_id,
         "amount": round(random.uniform(100, 2000), 2),
-        "timestamp": now,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "city": anomaly_city,
+        "latitude": lat + random.uniform(-0.05, 0.05),
+        "longitude": lon + random.uniform(-0.05, 0.05),
         "transaction_type": "purchase",
         "merchant": fake.company(),
         "is_seed_fraud": True,
-    }
-    return [
-        {**base, "transaction_id": str(uuid.uuid4()), "city": city_a, "latitude": lat_a, "longitude": lon_a},
-        {**base, "transaction_id": str(uuid.uuid4()), "city": city_b, "latitude": lat_b, "longitude": lon_b},
-    ]
+    }]
 
 
 def connect_producer() -> KafkaProducer:
@@ -134,22 +135,29 @@ def connect_producer() -> KafkaProducer:
 def main() -> None:
     producer = connect_producer()
     users = [f"user_{i:04d}" for i in range(1, 51)]
+    # Small pool of "at-risk" users reused for rapid-fire so bursts hit the same user_id
+    rapid_fire_users = [f"user_{i:04d}" for i in range(1, 6)]
     delay = 1.0 / TPS
     msg_count = 0
 
     print(f"[producer] Streaming to topic '{KAFKA_TOPIC}' at ~{TPS} TPS")
 
     while True:
-        user_id = random.choice(users)
         roll = random.random()
 
-        if roll < 0.05:                          # 4 % high-value fraud
+        # Balanced: ~5% high-value | ~5% rapid-fire | ~5% location | ~85% normal
+        if roll < 0.05:
+            user_id = random.choice(users)
             batch = [make_high_value_transaction(user_id)]
-        elif roll < 0.12:                        # 3 %  rapid-fire fraud
+        elif roll < 0.10:
+            # Use the small rapid-fire pool so same user appears multiple times quickly
+            user_id = random.choice(rapid_fire_users)
             batch = make_rapid_transactions(user_id)
-        elif roll < 0.15:                        # 3 %  location anomaly
+        elif roll < 0.15:
+            user_id = random.choice(users)
             batch = make_location_anomaly(user_id)
-        else:                                    # 90 %  normal
+        else:
+            user_id = random.choice(users)
             batch = [make_normal_transaction(user_id)]
 
         for txn in batch:

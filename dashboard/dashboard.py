@@ -19,7 +19,6 @@ REFRESH_SECS = 15
 
 st.set_page_config(
     page_title="Fraud Detection Dashboard",
-   
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -58,9 +57,9 @@ while True:
 
         # ── KPI row ───────────────────────────────────────────────────────────
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric(" Total Transactions", f"{total:,}")
-        c2.metric(" Fraud Alerts", f"{fraud_count:,}", delta=None)
-        c3.metric(" Fraud Rate", f"{fraud_rate:.2f}%")
+        c1.metric("Total Transactions", f"{total:,}")
+        c2.metric("Fraud Alerts", f"{fraud_count:,}", delta=None)
+        c3.metric("Fraud Rate", f"{fraud_rate:.2f}%")
         c4.metric(
             " Avg Fraud Amount",
             f"${fraud['amount'].mean():,.2f}" if not fraud.empty else "—"
@@ -72,7 +71,7 @@ while True:
         col_left, col_right = st.columns([3, 2])
 
         with col_left:
-            st.subheader(" Latest Fraud Alerts")
+            st.subheader("Latest Fraud Alerts")
             if fraud.empty:
                 st.info("No fraud alerts yet — waiting for Spark output…")
             else:
@@ -80,16 +79,16 @@ while True:
                              "fraud_reason", "timestamp"]
                 show_cols = [c for c in show_cols if c in fraud.columns]
                 display = fraud[show_cols].sort_values("timestamp", ascending=False).head(20)
-                st.dataframe(
-                    display.style.applymap(
-                        lambda v: "background-color: #fff3f3; color: #8b0000" if isinstance(v, str) and "high_value" in v else "",
-                        subset=["fraud_reason"] if "fraud_reason" in display.columns else []
-                    ),
-                    use_container_width=True,
-                )
+                def highlight_fraud(val):
+                    return "background-color: #fff3f3; color: #8b0000" if isinstance(val, str) and "high_value" in val else ""
+
+                styled = display.style
+                if "fraud_reason" in display.columns:
+                    styled = styled.map(highlight_fraud, subset=["fraud_reason"])
+                st.dataframe(styled, use_container_width=True)
 
         with col_right:
-            st.subheader(" Fraud by Reason")
+            st.subheader("Fraud by Reason")
             if not fraud.empty and "fraud_reason" in fraud.columns:
                 reason_counts = fraud["fraud_reason"].value_counts().reset_index()
                 reason_counts.columns = ["Reason", "Count"]
@@ -129,7 +128,7 @@ while True:
 
         # ── Geo heatmap ───────────────────────────────────────────────────────
         if not fraud.empty and "latitude" in fraud.columns and "longitude" in fraud.columns:
-            st.subheader(" Fraud Alert Locations")
+            st.subheader("Fraud Alert Locations")
             fig3 = px.scatter_geo(
                 fraud.dropna(subset=["latitude", "longitude"]),
                 lat="latitude", lon="longitude",
