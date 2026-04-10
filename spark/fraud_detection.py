@@ -42,6 +42,10 @@ spark = (
     .config("spark.sql.shuffle.partitions", "4")
     .getOrCreate()
 )
+# Disable .crc checksum sidecar files on the local filesystem
+spark.sparkContext._jsc.hadoopConfiguration().setBoolean(
+    "fs.file.impl.disable.checksums", True
+)
 spark.sparkContext.setLogLevel("WARN")
 
 # ── Schema ────────────────────────────────────────────────────────────────────

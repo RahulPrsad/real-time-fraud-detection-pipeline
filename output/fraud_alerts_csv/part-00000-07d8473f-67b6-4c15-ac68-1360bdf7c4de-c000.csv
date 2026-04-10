@@ -1,0 +1,1 @@
+transaction_id,user_id,amount,timestamp,city,latitude,longitude,transaction_type,merchant,is_seed_fraud,kafka_ts,event_time,fraud_high_value,fraud_location_anomaly,is_fraud,fraud_reason,processed_at
