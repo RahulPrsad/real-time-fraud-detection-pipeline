@@ -1,141 +1,369 @@
-# Real-Time Fraud Detection Pipeline
+# 🚀 Real-Time Fraud Detection Pipeline (Version 2 - ML Based)
 
-A production-style streaming pipeline using **Apache Kafka**, **Apache Spark Streaming**, **Docker Compose**, and **Streamlit**.
+A production-style **real-time fraud detection pipeline** built using **Apache Kafka**, **Apache Spark Structured Streaming**, **Machine Learning**, **Docker Compose**, and **Streamlit**.
 
-```
-[Python Producer] → [Kafka] → [Spark Streaming] → [Fraud Detection] → [Parquet/CSV] → [Streamlit Dashboard]
+The pipeline continuously ingests transaction events, performs feature engineering, predicts fraudulent transactions using a pre-trained machine learning model, stores predictions, and visualizes results in a live dashboard.
+
+---
+
+## 📌 Architecture
+
+```text
+                +------------------+
+                | Python Producer  |
+                +--------+---------+
+                         |
+                         v
+                  +-------------+
+                  | Apache Kafka|
+                  +------+------+
+                         |
+                         v
+        +---------------------------------+
+        | Spark Structured Streaming      |
+        |                                 |
+        |  • Feature Engineering          |
+        |  • ML Model Inference           |
+        +---------------+-----------------+
+                        |
+         +--------------+--------------+
+         |                             |
+         v                             v
+  Fraud Predictions             All Transactions
+         |                             |
+         +--------------+--------------+
+                        |
+                        v
+              Parquet / CSV Storage
+                        |
+                        v
+              Streamlit Dashboard
 ```
 
 ---
 
+# ✨ Features
 
-## Project layout
+- Real-time transaction streaming
+- Apache Kafka event ingestion
+- Spark Structured Streaming pipeline
+- Feature engineering on streaming data
+- ML-based fraud prediction
+- Fraud probability scoring
+- Parquet and CSV output
+- Live Streamlit dashboard
+- Docker Compose deployment
+- Kafka UI monitoring
+- Easily replaceable ML models
 
-```
+---
+
+# 🛠️ Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Streaming | Apache Kafka |
+| Processing | Apache Spark Structured Streaming |
+| Machine Learning | Scikit-learn |
+| Dashboard | Streamlit |
+| Storage | Parquet / CSV |
+| Containerization | Docker Compose |
+| Language | Python |
+
+---
+
+# 📁 Project Structure
+
+```text
 fraud-detection/
-<<<<<<< HEAD
-├── docker-compose.yml          # Orchestrates all services
-=======
-├── docker-compose.yml          
->>>>>>> 68f75264affd4489de478e1117f6e8cd80db304e
+│
+├── docker-compose.yml
+│
 ├── producer/
 │   ├── Dockerfile
-│   ├── requirements.txt
-│   └── producer.py             # Kafka transaction simulator
+│   ├── producer.py
+│   └── requirements.txt
+│
 ├── spark/
 │   ├── Dockerfile
-│   └── fraud_detection.py      # Spark Streaming + fraud rules
+│   ├── fraud_detection.py
+│   ├── feature_engineering.py
+│   ├── train_model.py
+│   ├── model.pkl
+│   └── scaler.pkl
+│
 ├── dashboard/
 │   ├── Dockerfile
-│   └── dashboard.py            # Streamlit visualisation
-└── output/                     # Written by Spark (auto-created)
-    ├── transactions/            # Clean Parquet files
-    ├── fraud_alerts/            # Flagged Parquet files
-    └── fraud_alerts_csv/        # CSV copies for easy inspection
+│   └── dashboard.py
+│
+└── output/
+    ├── transactions/
+    ├── fraud_predictions/
+    └── fraud_predictions_csv/
 ```
 
 ---
 
-## Step-by-step setup
+# ⚙️ Prerequisites
 
-### Step 1 — Clone / create the project
+- Docker
+- Docker Compose
+- Python 3.10+
+- Git
+
+---
+
+# 🚀 Getting Started
+
+## 1. Clone the Repository
 
 ```bash
-# If you received this as a zip, unzip it. Otherwise:
-mkdir fraud-detection && cd fraud-detection
-# Then copy all files into the structure above.
+git clone https://github.com/yourusername/fraud-detection.git
+
+cd fraud-detection
 ```
 
-### Step 2 — Build all Docker images
+---
+
+## 2. Train the Machine Learning Model
+
+If a pretrained model is not available, train one using:
+
+```bash
+python spark/train_model.py
+```
+
+This generates:
+
+```
+model.pkl
+scaler.pkl
+```
+
+---
+
+## 3. Build Docker Images
 
 ```bash
 docker compose build
 ```
 
-This downloads base images and installs dependencies. Takes ~5 minutes on first run.
+---
 
-### Step 3 — Start the full pipeline
+## 4. Start the Pipeline
 
 ```bash
 docker compose up -d
 ```
 
-Services start in dependency order: Zookeeper → Kafka → Producer + Spark → Dashboard.
+This starts:
 
-### Step 4 — Verify services are running
+- Zookeeper
+- Kafka
+- Kafka UI
+- Producer
+- Spark Streaming
+- Streamlit Dashboard
+
+---
+
+## 5. Verify Running Containers
 
 ```bash
 docker compose ps
 ```
 
-Expected output:
-```
-NAME         STATUS          PORTS
-zookeeper    running         0.0.0.0:2181->2181/tcp
-kafka        running         0.0.0.0:9092->9092/tcp
-kafka-ui     running         0.0.0.0:8080->8080/tcp
+Example:
+
+```text
+NAME         STATUS
+
+zookeeper    running
+kafka        running
 producer     running
 spark        running
-dashboard    running         0.0.0.0:8501->8501/tcp
-```
-
-### Step 5 — Watch logs
-
-```bash
-# See all services together
-docker compose logs -f
-
-# Individual service logs
-docker compose logs -f producer   # transaction events
-docker compose logs -f spark      # batch processing + fraud counts
-docker compose logs -f dashboard  # Streamlit startup
-```
-
-### Step 6 — Open the interfaces
-
-| Interface | URL | What you see |
-|-----------|-----|-------------|
-| Streamlit Dashboard | http://localhost:8501 | Live fraud alerts, charts, geo map |
-| Kafka UI | http://localhost:8080 | Topic browser, consumer lag |
-
-> **Note:** The Streamlit dashboard will show "Waiting for data…" for the first 30–60 seconds while Spark processes its first micro-batch.
-
-### Step 7 — Inspect output files
-
-Spark writes Parquet files to the `./output` directory on your host machine:
-
-```bash
-# See what has been written
-ls -lh output/transactions/
-ls -lh output/fraud_alerts/
-
-# Read CSV alerts (easier for quick inspection)
-cat output/fraud_alerts_csv/*.csv | head -20
+dashboard    running
 ```
 
 ---
 
-## Fraud detection rules
+## 6. View Logs
 
-| Rule | Condition | Fraud reason label |
-|------|-----------|--------------------|
-| High-value | `amount > $10,000` | `high_value` |
-| Rapid-fire | `> 5 transactions in 60 seconds for same user` | `rapid_fire` |
-| Location anomaly | `> 500 km between consecutive transactions` | `location_anomaly` |
-| Combined | Both high-value AND location | `high_value+location_anomaly` |
+All services
 
-### Tuning thresholds
+```bash
+docker compose logs -f
+```
 
-Edit environment variables in `docker-compose.yml`:
+Individual services
+
+```bash
+docker compose logs -f producer
+docker compose logs -f spark
+docker compose logs -f dashboard
+```
+
+---
+
+# 📊 Dashboard
+
+Open:
+
+```
+http://localhost:8501
+```
+
+The dashboard displays:
+
+- Total transactions
+- Fraud count
+- Fraud probability
+- Fraud trends
+- Transaction history
+- Live updates
+
+---
+
+# 📈 Kafka UI
+
+Open:
+
+```
+http://localhost:8080
+```
+
+Monitor:
+
+- Topics
+- Producers
+- Consumers
+- Consumer Lag
+- Messages
+
+---
+
+# 🤖 Machine Learning Pipeline
+
+Each incoming transaction follows the workflow below.
+
+```text
+Transaction
+
+↓
+
+Feature Engineering
+
+↓
+
+Scaling
+
+↓
+
+ML Model
+
+↓
+
+Fraud Probability
+
+↓
+
+Prediction
+
+↓
+
+Storage
+```
+
+---
+
+# 🧠 Feature Engineering
+
+Example features include:
+
+- Transaction amount
+- Merchant category
+- Payment method
+- Transaction frequency
+- Average spending
+- User risk score
+- Device type
+- Geographic distance
+- Previous fraud history
+- Time of transaction
+
+---
+
+# 📦 Supported Models
+
+Any Scikit-learn compatible model can be deployed.
+
+Examples:
+
+- Logistic Regression
+- Random Forest
+- XGBoost
+- LightGBM
+- CatBoost
+- Isolation Forest
+
+Simply replace:
+
+```
+model.pkl
+```
+
+No changes to the streaming pipeline are required.
+
+---
+
+# 📂 Output
+
+Spark writes results into:
+
+```
+output/
+```
+
+Example structure:
+
+```text
+output/
+
+transactions/
+
+fraud_predictions/
+
+fraud_predictions_csv/
+```
+
+Prediction example
+
+| Transaction | Prediction | Probability |
+|-------------|-----------|-------------|
+| TX1001 | Fraud | 0.96 |
+| TX1002 | Legitimate | 0.08 |
+
+---
+
+# ⚙️ Configuration
+
+Modify the Spark environment variables in:
+
+```
+docker-compose.yml
+```
+
+Example:
 
 ```yaml
 environment:
-  FRAUD_THRESHOLD: "10000"      # USD amount ceiling
-  RAPID_TXN_LIMIT: "5"          # max txns per 60-second window
-  LOCATION_KM_LIMIT: "500"      # max km between consecutive txns
+  MODEL_PATH: "/app/model.pkl"
+  SCALER_PATH: "/app/scaler.pkl"
+  FRAUD_THRESHOLD: "0.80"
+  BATCH_INTERVAL: "10"
 ```
 
-Then restart just the Spark service:
+Restart Spark:
 
 ```bash
 docker compose restart spark
@@ -143,14 +371,96 @@ docker compose restart spark
 
 ---
 
-## Stopping the pipeline
+# 🔄 Retraining the Model
+
+When new labeled data becomes available:
 
 ```bash
-# Stop all containers (keeps output data)
-docker compose down
+python spark/train_model.py
+```
 
-# Stop and remove output data too
-docker compose down && rm -rf output/
+Restart Spark:
+
+```bash
+docker compose restart spark
 ```
 
 ---
+
+# 📊 End-to-End Workflow
+
+```text
+Python Producer
+        │
+        ▼
+Apache Kafka
+        │
+        ▼
+Spark Structured Streaming
+        │
+        ▼
+Feature Engineering
+        │
+        ▼
+Machine Learning Model
+        │
+        ▼
+Fraud Probability
+        │
+        ▼
+Fraud Prediction
+        │
+        ▼
+Parquet / CSV Storage
+        │
+        ▼
+Streamlit Dashboard
+```
+
+---
+
+# 🛑 Stop the Pipeline
+
+Keep output data:
+
+```bash
+docker compose down
+```
+
+Remove containers and generated output:
+
+```bash
+docker compose down
+
+rm -rf output/
+```
+
+---
+
+# 🔮 Future Enhancements
+
+- Deep Learning (LSTM / Transformer)
+- Online Model Retraining
+- MLflow Model Registry
+- Feature Store Integration
+- Prometheus & Grafana Monitoring
+- Kubernetes Deployment
+- CI/CD with GitHub Actions
+- REST API for Predictions
+- Cloud Deployment (AWS, Azure, GCP)
+
+---
+
+# 📜 License
+
+This project is licensed under the MIT License.
+
+---
+
+# 👨‍💻 Author
+
+**Rahul Prasad**
+
+Computer Science Engineering Student
+
+Apache Spark • Kafka • Machine Learning • Data Engineering • Stream Processing
